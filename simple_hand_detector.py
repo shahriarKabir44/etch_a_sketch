@@ -65,7 +65,7 @@ def main():
             if rightThumbPosition:
                 if rightIndexPosition:
                     drawType = getCursorMode(
-                        rightThumbPosition, rightIndexPosition, threshold=NODE_WIDTH)
+                        rightThumbPosition, rightIndexPosition, threshold=25)
                     # print(drawType)
                     if drawType == DRAW_MODE:
                         if lastInserted == None:
