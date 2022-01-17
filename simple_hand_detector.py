@@ -3,6 +3,7 @@ import mediapipe as mp
 import time
 import random
 from hand_detection_module import HandDetector
+from utility_classes import Point, LinkedList
 
 DRAW_MODE = 0
 ERASER_MODE = 1
@@ -13,19 +14,6 @@ def canTakePoint(point1, point2, minimumDistance):
     x1, y1 = point1
     x2, y2 = point2
     return (x1-x2)**2 + (y1-y2)**2 >= minimumDistance**2
-
-
-def drawLineSegments(points: list[list[int]], imageObject):
-    for n in range(1, len(points)):
-        x1, y1 = points[n]
-        x2, y2 = points[n-1]
-        cv2.line(imageObject, (x1, y1), (x2, y2), (0, 0, 254), 15)
-
-
-def drawCurveSegments(line_segments, imageObject):
-    # print('len', *(line_segments), sep=' ')
-    for curveSegment in line_segments:
-        drawLineSegments(curveSegment, imageObject)
 
 
 def getCursorMode(thumbLocation, indexFingerLocation, threshold=15):
@@ -42,10 +30,9 @@ def getCursorMode(thumbLocation, indexFingerLocation, threshold=15):
 def main():
     cap = cv2.VideoCapture(0)
     handDetector = HandDetector()
-    line_segments = [[]]
-    points = line_segments[0]
-
-    lastInserted = None
+    line_segments = LinkedList(Point(0, 0))
+    lastInserted = line_segments.head
+    lastInserted.isWithinSegment = False
     previousMode = None
     while True:
         success, img = cap.read()
@@ -73,33 +60,29 @@ def main():
                     if drawType == DRAW_MODE:
                         if lastInserted == None:
                             # print('inserted1', random.randint(1, 10))
-                            lastInserted = leftIndex
-                            line_segments[-1].append(lastInserted)
-                        elif canTakePoint(lastInserted, leftIndex, 15):
-                            lastInserted = leftIndex
+                            lastInserted = Point(leftIndex[0], leftIndex[1])
+                            line_segments .append(lastInserted)
+                        elif canTakePoint([lastInserted.x, lastInserted.y], leftIndex, 15) and lastInserted.isWithinSegment:
+                            lastInserted = Point(leftIndex[0], leftIndex[1])
                             # print('inserted', random.randint(1, 10))
-                            line_segments[-1].append(lastInserted)
+                            line_segments .append(lastInserted)
+                        elif lastInserted.isWithinSegment == False:
+                            lastInserted = Point(leftIndex[0], leftIndex[1])
+                            # print('inserted', random.randint(1, 10))
+                            line_segments .append(lastInserted)
                         previousMode = DRAW_MODE
 
                     elif drawType == DO_NOTHING_MODE:
                         if previousMode != DO_NOTHING_MODE:
-                            lastInserted = None
-                            line_segments.append([])
+                            lastInserted.isWithinSegment = False
                         previousMode = DO_NOTHING_MODE
                     else:
 
-                        for segment in range(len(line_segments)):
-                            validPlaces = []
-                            for n in range(len(line_segments[segment])):
-                                if canTakePoint(leftIndex, line_segments[segment][n], 25):
-                                    validPlaces.append(
-                                        line_segments[segment][n])
-                            line_segments[segment] = validPlaces
-                        lastInserted = None
-                        if previousMode != ERASER_MODE:
-                            line_segments.append([])
+                        line_segments.findAndRemove(leftIndex)
+                        lastInserted.isWithinSegment = False
                         previousMode = ERASER_MODE
-        drawCurveSegments(line_segments, img)
+
+        line_segments.draw(img)
         # print(points)
         # cv2.putText(img, text="abcd", org=(10, 70), color=(255, 0, 255),
         #             fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=3)
