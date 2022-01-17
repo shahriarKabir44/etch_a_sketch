@@ -4,12 +4,13 @@ import cv2
 
 
 class Point:
-    def __init__(self, x, y) -> None:
+    def __init__(self, x, y, color) -> None:
         self.x = x
         self.y = y
         self.isWithinSegment = True
         self.next: Point = None
         self.prev: Point = None
+        self.color: tuple = color
 
     def connect(self, pt):
         self.next = pt
@@ -66,7 +67,7 @@ class LinkedList:
 
     def drawLineSegments(self, point1: Point, point2: Point, imageObject):
         cv2.line(imageObject, (point1.x, point1.y),
-                 (point2.x, point2.y), (0, 0, 254), 15)
+                 (point2.x, point2.y), point1.color, 15)
 
     def draw(self, imageObject):
         top = self.head
